@@ -1,0 +1,35 @@
+{
+  "name": "Agent Workspace",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {},
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/devcontainers/features/python:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": ".devcontainer/post-create.sh",
+  "forwardPorts": [4096, 4097],
+  "portsAttributes": {
+    "4096": {
+      "label": "OpenCode Server",
+      "onAutoForward": "notify"
+    },
+    "4097": {
+      "label": "Codex Daemon",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode-remote.remote-containers",
+        "github.copilot",
+        "rust-lang.rust-analyzer",
+        "golang.go"
+      ]
+    }
+  }
+}

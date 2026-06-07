@@ -1,0 +1,16 @@
+# Agent logs
+.agent-logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/settings.json
+
+# Build artifacts (uncomment for your project)
+# target/
+# build/
+# dist/
+# __pycache__/
+# *.pyc

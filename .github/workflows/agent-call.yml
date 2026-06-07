@@ -1,0 +1,73 @@
+# GitHub Action: Agent Call
+# Triggerable by issue comment: "/agent <task>"
+# This allows external agents to delegate work into this repo's native environment.
+name: Agent Call
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  agent-task:
+    if: startsWith(github.event.comment.body, '/agent ')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install agents
+        run: |
+          npm install -g opencode @anthropic-ai/claude-code
+          pip3 install aider-chat
+
+      - name: Extract task
+        id: task
+        run: |
+          BODY="${{ github.event.comment.body }}"
+          TASK="${BODY#/agent }"
+          echo "task=${TASK}" >> $GITHUB_OUTPUT
+
+      - name: Route task to agent
+        id: route
+        run: |
+          TASK="${{ steps.task.outputs.task }}"
+
+          # Auto-select: route based on first word or keyword
+          if echo "${TASK}" | grep -qiE "review|audit|check"; then
+            echo "Using Claude Code..."
+            claude --print -p "${TASK}" > /tmp/agent-output.md 2>&1
+          elif echo "${TASK}" | grep -qiE "crush|grok|what"; then
+            echo "Using Crush..."
+            crush run "${TASK}" > /tmp/agent-output.md 2>&1
+          elif echo "${TASK}" | grep -qiE "quick|fast"; then
+            echo "Using Aider..."
+            aider --msg "${TASK}" --yes > /tmp/agent-output.md 2>&1
+          else
+            echo "Using OpenCode..."
+            opencode run "${TASK}" > /tmp/agent-output.md 2>&1
+          fi
+
+      - name: Post result as comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('/tmp/agent-output.md', 'utf8');
+            const truncated = output.length > 60000
+              ? output.substring(0, 60000) + '\n\n... (truncated)'
+              : output;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Agent Result\n\n\`\`\`\n${truncated}\n\`\`\``
+            });
