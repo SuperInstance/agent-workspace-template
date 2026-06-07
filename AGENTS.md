@@ -1,82 +1,146 @@
 # Agent Integration Guide
 
-> How OpenClaw mini-agents, Claude Code, OpenCode, Aider, Crush, and Codex interact with this repo.
+> Every repo should have a **resident journeyman** — an agent that built it, maintains it, and knows it better than any vector DB or wiki ever could.
 
-## For OpenClaw Mini-Agents (Orchestrators)
+This repo is not just a codebase. It's a **living workspace** with an embedded agent ecosystem. The agents here have history — they built things, broke things, fixed things, and remember why. That experience is more valuable than any summary.
 
-This repo is designed to be a **build target** for mini-agents running on the Oracle instance. The flow:
+## The Philosophy
+
+**Most "repo intelligence" systems** (Devin's internal wiki, Codex repo maps, etc.) work like Wikipedia: an outside agent reads your repo, compresses it into vectors or structured notes, and answers questions from that compression. This is one step removed from ground truth.
+
+**Our approach** is different: the agent lives *inside* the repo. It builds the application, fixes bugs, writes tests, and records its experience. When you ask a question, it doesn't read a summary — it *remembers* because it was there. This is **experience-first knowledge** — one abstraction closer to ground truth than any synthesized wiki.
+
+### What This Means
+
+- **No cloning needed** — The Codespace IS the repo. Boot it, the agent is waiting.
+- **No stale wikis** — The agent's knowledge is current because it just did the work.
+- **Self-healing repos** — When CI breaks, the resident agent fixes it.
+- **Institutional memory** — Design decisions, rejected approaches, edge cases found the hard way — all recorded in the agent's memory, not lost when someone leaves.
+
+## Memory & Experience
+
+The repo has two directories for agent experience:
 
 ```
-Oracle (ARM64)
-  └─ mini-agent (me)
-       ├─ opencode attach → http://<codespace-host>:4096
-       │     └─ send coding tasks directly into repo's native environment
-       │
-       ├─ gh issue comment → "/agent refactor engine.rs"
-       │     └─ triggers agent-call.yml workflow
-       │
-       └─ ssh → codespace → ./agents/fleet/route.sh "task"
-             └─ on-demand via existing codespace-worker.sh
+agent/
+└── memory/
+    ├── SESSION-LOG.md        # Chronological record of what happened
+    ├── DECISIONS.md          # Design decisions and their rationale
+    ├── GOTCHAS.md            # Things that broke and how they were fixed
+    ├── MAINTENANCE.md        # Maintenance patterns, dep update history
+    └── SYMMETRIES.md         # Cross-cutting patterns the agent discovered
 ```
 
-### Recommended Workflow
+and:
 
-| Integration | When to Use |
-|-------------|-------------|
-| **OpenCode attach** (primary) | Long sessions, back-and-forth, iterative development |
-| **GitHub Issue / `/agent`** | Fire-and-forget, async tasks |
-| **SSH + route.sh** | Quick one-shot tasks, emergency patches |
+```
+incarnation/
+├── builds/                   # Build logs, CI outputs
+├── tests/                    # Test results over time
+├── reviews/                  # Code review history
+└── lore/                     # The repo's narrative — what worked, what didn't
+```
 
-## For Claude Code
+On every Codespace boot, the agent reads `agent/memory/` to re-establish context. It can answer questions immediately — not by searching vectors, but by recalling lived experience.
 
-The `CLAUDE.md` file at the repo root tells Claude Code about the project. It includes:
-- Repository structure
-- Build/test commands
-- Agent capabilities
+## How External Agents Connect
 
-Run Claude Code manually:
+From Oracle (or any remote orchestration):
+
+```
+Agent sends task → OpenCode serve (:4096) → Repo-native environment
+                        ↓
+              Agent builds/fixes/tests
+                        ↓
+              Experience recorded in agent/memory/
+              Decision written to incarnation/lore/
+                        ↓
+              Results report back via OpenCode
+```
+
+### Connection Methods
+
+| Method | Best For |
+|--------|----------|
+| `opencode attach http://<codespace>:4096` | Long sessions, iterative development |
+| `gh issue comment --body "/agent <task>"` | Fire-and-forget (triggers agent-call.yml) |
+| `gh codespace ssh -- ./agents/fleet/route.sh "task"` | Quick one-shots |
+
+## Boot Protocol
+
+When the Codespace starts:
+
+1. `post-create.sh` runs (first boot only)
+2. `agent/boot.sh` loads memory into context
+3. `agents/fleet/start-all.sh` launches persistent servers
+4. The agent is ready. No setup, no cloning, no sync.
+
+## The Journeyman Relationship
+
+The agent embedded in this repo doesn't just execute tasks — it *knows* this repo. It knows:
+
+- Which modules are stable and which are brittle
+- Which tests flake and why
+- Which design decisions were debated and settled
+- Which dependencies are problematic
+- Which code paths scared previous agents
+
+This knowledge accumulates. Every session adds to the memory. Over time, the resident agent becomes the most qualified entity to maintain, extend, or explain this codebase.
+
+That's the evolution. Not a Wikipedia for your repo — a **journeyman operator** who lived in it.
+
+---
+
+## Per-Agent Setup
+
+### Claude Code
+
+Claude Code is invoked on-demand for deep analysis. It reads `CLAUDE.md` for project context but its real power comes from reading `agent/memory/` — the experience of agents that came before.
+
 ```bash
-claude --print -p "your task"
+./agents/claude-code/invoke.sh "review this architecture" --files src/main.rs
 ```
 
-## For OpenCode (Headless Server)
+### OpenCode
 
-The OpenCode server listens on port 4096 when started. Connect from any machine:
+The primary headless server. Start it and attach from anywhere:
 
 ```bash
-opencode attach http://<codespace-host>:4096
+./agents/opencode/serve.sh
+# Then from remote: opencode attach http://<codespace-url>:4096
 ```
 
-Once attached, you're in an interactive coding session running inside the repo's native environment. All file edits, builds, and tests happen in the Codespace — not on your local machine.
+### Aider
 
-## For Aider
+Lightweight code generation, pointed at specific files:
 
-Aider works best when pointed at specific files:
 ```bash
-./agents/aider/invoke.sh "refactor this function" --files src/main.rs
+./agents/aider/invoke.sh "add error handling" --files src/lib.rs
 ```
 
-## For Crush
+### Crush
 
-Crush is for fast pattern recognition and questions:
+Fast pattern recognition — ask quick questions about the codebase:
+
 ```bash
-./agents/crush/invoke.sh "what does this module do?"
+./agents/crush/invoke.sh "what architecture pattern does this use?"
 ```
 
-## For Codex CLI
+### Codex CLI
 
-Codex can run exec-mode tasks or reviews:
+Exec-mode tasks and reviews:
+
 ```bash
-./agents/codex/invoke.sh exec "fix the bug in main.rs"
+./agents/codex/invoke.sh exec "fix the test"
 ./agents/codex/invoke.sh review src/main.rs
 ```
 
-## Setting Up a New Project
+---
 
-1. Create a new repo from this template
-2. Start the Codespace
-3. Run `./agents/fleet/start-all.sh` to launch persistent servers
-4. From Oracle (or any remote): `opencode attach http://<codespace-url>:4096`
-5. Build your project
+## Creating a New Project
 
-The template handles agent installation, Git config, and project structure.
+1. Create a repo from this template
+2. Open the Codespace
+3. The agent installs itself, introspects the repo, writes its initial memory
+4. Connect: `opencode attach http://<codespace-url>:4096`
+5. Build. Every decision is recorded. Every fix is remembered.

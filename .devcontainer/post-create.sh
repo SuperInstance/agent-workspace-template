@@ -56,3 +56,13 @@ aider --version 2>/dev/null && echo "Aider: OK" || echo "Aider: MISSING"
 echo ""
 echo "=== Agent Workspace Ready ==="
 echo "Run ./agents/fleet/start-all.sh to launch persistent servers."
+echo ""
+
+# ── Agent Boot ────────────────────────────────────────
+echo "Running agent boot protocol..."
+if [ -f "agent/boot.sh" ]; then
+  bash agent/boot.sh
+  echo "Agent boot complete."
+else
+  echo "No boot.sh found. Skipping."
+fi

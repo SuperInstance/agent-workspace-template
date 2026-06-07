@@ -1,6 +1,14 @@
 # Agent logs
 .agent-logs/
 
+# Large incarnation artifacts (keep structure, not content)
+incarnation/builds/*
+!incarnation/builds/.gitkeep
+incarnation/tests/*
+!incarnation/tests/.gitkeep
+incarnation/reviews/*
+!incarnation/reviews/.gitkeep
+
 # OS files
 .DS_Store
 Thumbs.db
