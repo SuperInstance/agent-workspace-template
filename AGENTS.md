@@ -144,3 +144,13 @@ Exec-mode tasks and reviews:
 3. The agent installs itself, introspects the repo, writes its initial memory
 4. Connect: `opencode attach http://<codespace-url>:4096`
 5. Build. Every decision is recorded. Every fix is remembered.
+
+---
+
+## Garbage Collection
+
+This repo follows the fleet GC protocol defined in:
+- [baton-system/docs/GC_AGENTS.md](https://github.com/SuperInstance/baton-system/blob/main/docs/GC_AGENTS.md)
+- [baton-system/docs/gc-intelligent-README.md](https://github.com/SuperInstance/baton-system/blob/main/docs/gc-intelligent-README.md)
+
+**Local `.gcconfig`**: see `.gcconfig` in repo root.
